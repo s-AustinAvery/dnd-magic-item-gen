@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include("partials/head", { title: title }) %>
+</head>
+<body>
+<!-- Header / Nav -->
+<%- include("partials/header") %>
+
+<!-- Main content -->
+<main class="main-content">
+
+    <!-- Generator card -->
+    <section class="card generator-card">
+        <h2>Generate Item</h2>
+
+        <form id="generator-form">
+
+            <!-- Item type -->
+            <div class="form-group">
+                <label for="itemType">Item Type</label>
+                <select id="itemType" name="itemType">
+                    <option value="random">Random</option>
+                    <option value="weapon">Weapon</option>
+                    <option value="armor">Armor</option>
+                </select>
+            </div>
+
+            <!-- Item select -->
+            <div class="form-group hidden" id="itemSelectGroup">
+                <label for="itemSelect">Item</label>
+                <select id="itemSelect" name="itemSelect">
+                    <option value="random">Random</option>
+                    <!-- populate weapons/armor -->
+                </select>
+            </div>
+
+            <!-- Affix mode -->
+            <div class="form-group">
+                <label for="affixMode">Affixes</label>
+                <select id="affixMode" name="affixMode">
+                    <option value="random">Random</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+
+            <!-- Prefix select -->
+            <div class="form-group hidden" id="prefixGroup">
+                <label for="prefixSelect">Prefix</label>
+                <select id="prefixSelect" name="prefixSelect">
+                    <option value="random">Random</option>
+                    <option value="none">None</option>
+                    <!-- populate valid prefixes -->
+                </select>
+            </div>
+
+            <!-- Suffix select -->
+            <div class="form-group hidden" id="suffixGroup">
+                <label for="suffixSelect">Suffix</label>
+                <select id="suffixSelect" name="suffixSelect">
+                    <option value="random">Random</option>
+                    <option value="none">None</option>
+                    <!-- populate valid suffixes -->
+                </select>
+            </div>
+
+            <!-- Generate button -->
+            <div class="form-group">
+                <button type="submit" class="generate-btn">Generate Item</button>
+            </div>
+
+        </form>
+    </section>
+
+    <!-- Result rard -->
+    <section class="card result-card hidden" id="resultCard">
+        <div class="item-name" id="itemName">
+            <!-- Generated item name -->
+        </div>
+
+        <ul class="item-properties" id="itemProperties">
+            <!-- Generated properties -->
+        </ul>
+
+        <% if (user) { %>
+            <button id="saveItemBtn">Save Item</button>
+        <% } else { %>
+            <p class="login-hint">Log in to save items.</p>
+        <% } %>
+    </section>
+</main>
+
+<!-- Footer -->
+<%- include("partials/foot") %>
+<script src="/js/generatorcore.js"></script>
+<script src="/js/main.js"></script>
+<script src="/js/headnav.js"></script>
+</body>
+</html>

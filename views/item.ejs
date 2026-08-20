@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include("partials/head", { title: title }) %>
+</head>
+<body>
+
+<%- include("partials/header") %>
+
+<main class="main-content">
+    <section class="card result-card">
+
+        <div class="item-name"><%= item.name %></div>
+
+        <ul class="item-properties">
+
+            <% if (item.damageDisplay) { %>
+                <li>
+                    <span class="prop-label">Damage</span>
+                    <span class="prop-value"> <%= item.damageDisplay %></span>
+                </li>
+            <% } %>
+
+            <% if (item.itemType === "armor" && item.baseItem && item.baseItem.armor_class) { %>
+                <%
+                    const ac = item.baseItem.armor_class;
+                    let acStr = ac.base.toString();
+                    if (ac.dex_bonus) {
+                        acStr += ac.max_bonus ? ` + DEX (max ${ac.max_bonus})` : " + DEX";
+                    }
+                %>
+                <li>
+                    <span class="prop-label">Armor Class</span>
+                    <span class="prop-value"> <%= acStr %></span>
+                </li>
+            <% } %>
+
+            <% item.descriptions.forEach(desc => { %>
+                <li class="prop-description"><%= desc %></li>
+            <% }) %>
+
+        </ul>
+
+        <p class="saved-date">Saved <%= new Date(saved_at).toLocaleDateString() %></p>
+
+        <% if (user) { %>
+            <button class="generate-btn" id="saveSharedItemBtn">Save to My Collection</button>
+            <p class="save-feedback hidden" id="saveFeedback"></p>
+        <% } else { %>
+            <p class="login-hint"><a href="/login">Log in</a> to save this item to your collection.</p>
+        <% } %>
+
+    </section>
+</main>
+
+<%- include("partials/foot") %>
+<script>
+    // Pass items data to JS
+    const sharedItem = <%- JSON.stringify(item) %>;
+</script>
+<script src="/js/item.js"></script>
+<script src="/js/headnav.js"></script>
+</body>
+</html>

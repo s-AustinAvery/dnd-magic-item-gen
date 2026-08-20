@@ -1,0 +1,340 @@
+document.addEventListener("DOMContentLoaded", () => {
+
+    // -- Element references --
+    const itemTypeSelect    = document.getElementById("itemType");
+    const itemSelectGroup   = document.getElementById("itemSelectGroup");
+    const itemSelect        = document.getElementById("itemSelect");
+
+    const affixModeSelect   = document.getElementById("affixMode");
+    const prefixGroup       = document.getElementById("prefixGroup");
+    const suffixGroup       = document.getElementById("suffixGroup");
+    const prefixSelect      = document.getElementById("prefixSelect");
+    const suffixSelect      = document.getElementById("suffixSelect");
+
+    const form              = document.getElementById("generator-form");
+    const resultCard        = document.getElementById("resultCard");
+    const itemNameEl        = document.getElementById("itemName");
+    const itemPropertiesEl  = document.getElementById("itemProperties");
+
+    // -- State --
+    // Cache fetched lists so each UI update doesnt require another request
+    let cachedWeapons   = null;
+    let cachedArmor     = null;
+    let cachedAffixes   = null; // full affix list from DB
+    let lastLoadedType  = null; // type currently in the item dropdown
+
+    // -- Utility --
+    function show(el) { el.classList.remove("hidden"); }
+    function hide(el) { el.classList.add("hidden"); }
+
+    function pickRandom(arr) {
+        return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    // -- Data fetching --
+
+    async function fetchItemList(type) {
+        // Use from cache if already loaded
+        if (type === "weapon" && cachedWeapons) return cachedWeapons;
+        if (type === "armor"  && cachedArmor)   return cachedArmor;
+
+        const endpoint = type === "weapon" ? "/api/items/weapons" : "/api/items/armor";
+
+        const response = await fetch(endpoint);
+        if (!response.ok) throw new Error(`Failed to fetch ${type} list`);
+        const items = await response.json();
+
+        if (type === "weapon") cachedWeapons = items;
+        else                   cachedArmor   = items;
+
+        return items;
+    }
+
+    async function fetchAffixes() {
+        if (cachedAffixes) return cachedAffixes;
+
+        const response = await fetch("/api/affixes");
+        if (!response.ok) throw new Error("Failed to fetch affixes");
+        cachedAffixes = await response.json();
+        return cachedAffixes;
+    }
+
+    async function fetchItemDetail(index) {
+        const response = await fetch(`/api/items/detail/${index}`);
+        if (!response.ok) throw new Error(`Failed to fetch item detail: ${index}`);
+        return await response.json();
+    }
+
+    // -- Populate dropdowns --
+
+    async function populateItemDropdown(type) {
+        // Skip populating if the item type is already loaded
+        if (lastLoadedType === type) return;
+
+        itemSelect.innerHTML = "";
+        const loadingOption = document.createElement("option");
+        loadingOption.disabled = true;
+        loadingOption.textContent = "Loading...";
+        itemSelect.appendChild(loadingOption);
+
+        try {
+            const items = await fetchItemList(type);
+
+            itemSelect.innerHTML = "";
+
+            const randomOption = document.createElement("option");
+            randomOption.value = "random";
+            randomOption.textContent = "Random";
+            itemSelect.appendChild(randomOption);
+
+            items.forEach(item => {
+                const option = document.createElement("option");
+                option.value = item.index;
+                option.textContent = item.name;
+                itemSelect.appendChild(option);
+            });
+
+            lastLoadedType = type;
+
+        } catch (err) {
+            console.error("Failed to load items:", err);
+            itemSelect.innerHTML = "";
+            const errorOption = document.createElement("option");
+            errorOption.disabled = true;
+            errorOption.textContent = "Failed to load items";
+            itemSelect.appendChild(errorOption);
+        }
+    }
+
+    async function populateAffixDropdowns(itemType) {
+        // Reset to defaults first
+        prefixSelect.innerHTML = `<option value="random">Random</option><option value="none">None</option>`;
+        suffixSelect.innerHTML = `<option value="random">Random</option><option value="none">None</option>`;
+
+        try {
+            const affixes = await fetchAffixes();
+
+            // Build bundles using the engine so the dropdown matches exactly what
+            // the engine will select. There will be one option per logical affix not per DB row
+            const bundles = MagicItemEngine.buildAffixBundles(affixes);
+            const prefixBundles = MagicItemEngine.filterBundles(bundles, "prefix", itemType);
+            const suffixBundles = MagicItemEngine.filterBundles(bundles, "suffix", itemType);
+
+            // Use the id of the bundles first row as the option value.
+            // resolveCustomBundle will find the bundle that contains that id.
+            prefixBundles.forEach(bundle => {
+                const option = document.createElement("option");
+                option.value = bundle.rows[0].id;
+                option.textContent = bundle.display_name;
+                prefixSelect.appendChild(option);
+            });
+
+            suffixBundles.forEach(bundle => {
+                const option = document.createElement("option");
+                option.value = bundle.rows[0].id;
+                option.textContent = bundle.display_name;
+                suffixSelect.appendChild(option);
+            });
+
+        } catch (err) {
+            console.error("Failed to load affixes:", err);
+        }
+    }
+
+    // -- Render result --
+
+    function renderResult(item) {
+        // Item name
+        itemNameEl.textContent = item.name;
+
+        // Clear previous properties
+        itemPropertiesEl.innerHTML = "";
+
+        function addProperty(label, value) {
+            const li = document.createElement("li");
+            li.innerHTML = `<span class="prop-label">${label}</span><span class="prop-value"> ${value}</span>`;
+            itemPropertiesEl.appendChild(li);
+        }
+
+        // Item type
+        //addProperty("Type", item.itemType === "weapon" ? "Weapon" : "Armor");
+
+        // Damage - weapons only
+        if (item.damageDisplay) {
+            addProperty("Damage", item.damageDisplay);
+        }
+
+        // Armor class -armor only
+        if (item.itemType === "armor" && item.baseItem.armor_class) {
+            const ac = item.baseItem.armor_class;
+            let acStr = `${ac.base}`;
+            if (ac.dex_bonus) {
+                acStr += ac.max_bonus ? ` + DEX (max ${ac.max_bonus})` : " + DEX";
+            }
+            addProperty("Armor Class", acStr);
+        }
+
+        // Add these later once display is cleaned up
+
+        // Base weapon properties
+        //if (item.properties && item.properties.length > 0) {
+        //    addProperty("Properties", item.properties.join(", "));
+        //}
+
+        // Stealth disadvantage
+        //if (item.itemType === "armor" && item.baseItem.stealth_disadvantage) {
+        //    addProperty("Special", "Disadvantage on Stealth checks");
+        //}
+
+        // Affix effect descriptions
+        item.descriptions.forEach(desc => {
+            const li = document.createElement("li");
+            li.className = "prop-description";
+            li.textContent = desc;
+            itemPropertiesEl.appendChild(li);
+        });
+
+        show(resultCard);
+        resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // -- UI state management --
+
+    function updateUI() {
+        const type = itemTypeSelect.value;
+        const mode = affixModeSelect.value;
+
+        // Item dropdown visibility
+        if (type === "random") {
+            hide(itemSelectGroup);
+            lastLoadedType = null;
+        } else {
+            show(itemSelectGroup);
+            populateItemDropdown(type);
+        }
+
+        // Prefix/suffix dropdowns
+        if (mode === "custom") {
+            show(prefixGroup);
+            show(suffixGroup);
+            // Filter affixes to the selected item type
+            const affixFilterType = type === "random" ? "weapon" : type;
+            populateAffixDropdowns(affixFilterType);
+        } else {
+            hide(prefixGroup);
+            hide(suffixGroup);
+        }
+    }
+
+    // Refresh affix dropdowns when item type changes while in custom mode
+    itemTypeSelect.addEventListener("change", () => {
+        lastLoadedType = null;
+        updateUI();
+    });
+
+    affixModeSelect.addEventListener("change", updateUI);
+
+    // -- Form submission --
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const submitBtn = form.querySelector(".generate-btn");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Generating...";
+
+        try {
+            const affixes = await fetchAffixes();
+
+            // Resolve item type
+            let resolvedType = itemTypeSelect.value;
+            if (resolvedType === "random") {
+                resolvedType = Math.random() < 0.5 ? "weapon" : "armor";
+            }
+
+            // Resolve which base item to use
+            let selectedIndex = itemSelect.value;
+
+            // If item type was random or item select is random, pick one
+            if (itemTypeSelect.value === "random" || selectedIndex === "random") {
+                const list = await fetchItemList(resolvedType);
+                selectedIndex = pickRandom(list).index;
+            }
+
+            // Fetch full item data
+            const baseItem = await fetchItemDetail(selectedIndex);
+
+            // Resolve affix mode
+            const affixMode = affixModeSelect.value; // "random" or "custom"
+
+            // Only pass prefixId/suffixId in custom mode
+            const customOptions = affixMode === "custom"
+                ? { prefixId: prefixSelect.value, suffixId: suffixSelect.value }
+                : {};
+
+            // Generate the item
+            const generatedItem = MagicItemEngine.generateMagicItem({
+                baseItem,
+                itemType: resolvedType,
+                affixes,
+                affixMode,
+                ...customOptions
+            });
+
+            // Reset save button for the new item
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = "Save Item";
+            }
+
+            lastGeneratedItem = generatedItem; 
+            renderResult(generatedItem);
+
+        } catch (err) {
+            console.error("Generation failed:", err);
+            alert("Something went wrong generating the item. Check the console for details.");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Generate Item";
+        }
+    });
+
+    // -- Save item --
+
+    const saveBtn = document.getElementById("saveItemBtn");
+    let lastGeneratedItem = null;
+
+    if (saveBtn) {
+        saveBtn.addEventListener("click", async () => {
+            if (!lastGeneratedItem) return;
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = "Saving...";
+
+            try {
+                const response = await fetch("/api/items/save", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ item: lastGeneratedItem })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    saveBtn.textContent = "Saved!";
+                } else {
+                    saveBtn.textContent = "Save Failed";
+                    saveBtn.disabled = false;
+                    console.error("Save error:", data.error);
+                }
+            } catch (err) {
+                saveBtn.textContent = "Save Failed";
+                saveBtn.disabled = false;
+                console.error("Save request failed:", err);
+            }
+        });
+    }
+
+    // -- Initial state --
+    updateUI();
+});

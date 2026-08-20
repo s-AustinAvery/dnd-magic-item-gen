@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include("partials/head", { title: "Collection" }) %>
+</head>
+<body>
+
+<%- include("partials/header") %>
+
+<main class="main-content">
+
+    <section class="card">
+        <h2><%= user.username %>'s armory</h2>
+    </section>
+
+    <section class="card">
+        <h2>Saved Items</h2>
+
+        <div id="collectionList">
+            <p class="muted" id="collectionLoading">Loading your items...</p>
+        </div>
+    </section>
+
+    <!-- Share modal -->
+    <div class="modal-overlay hidden" id="shareModal">
+        <div class="modal">
+            <h3>Share Item</h3>
+            <p>Anyone with this link can view this item:</p>
+            <div class="share-link-box">
+                <input type="text" id="shareLinkInput" readonly />
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="closeShareBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div class="modal-overlay hidden" id="deleteModal">
+        <div class="modal">
+            <p>Are you sure you want to delete <strong id="deleteItemName"></strong>?</p>
+            <div class="modal-actions">
+                <button class="btn-danger" id="confirmDeleteBtn">Delete</button>
+                <button class="btn-secondary" id="cancelDeleteBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<%- include("partials/foot") %>
+<script src="/js/collection.js"></script>
+<script src="/js/headnav.js"></script>
+</body>
+</html>
