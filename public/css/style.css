@@ -283,6 +283,27 @@ button:hover,
     padding: 2.5rem 2rem;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
+
+/* Back to generator link */
+.auth-back-link {
+    display: inline-block;
+    margin-bottom: 1.25rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.auth-back-link:hover {
+    color: var(--accent-primary);
+}
+
+/* Small helper text under a form field */
+.field-hint {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
  
 /* Header section inside the card */
 .auth-header {
