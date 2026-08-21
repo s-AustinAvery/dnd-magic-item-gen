@@ -96,24 +96,41 @@ app.get("/register", requireGuest, (req, res) => {
     });
 });
 
+// Basic email format 
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // Register post route
 app.post("/register", requireGuest, async (req, res) => {
     const { username, password, email } = req.body;
 
     if (!username || !password || !email) {
         return res.render("register", {
+            title: "Register",
             error: "All fields are required." 
+        });
+    }
+
+    if (!EMAIL_PATTERN.test(email)) {
+        return res.render("register", {
+            title: "Register",
+            error: "Please enter a valid email format."
         });
     }
 
     try {
         const [existing] = await db.query(
-            "SELECT id FROM users WHERE username = ?",
-            [username]
+            "SELECT id, username, email FROM users WHERE username = ? OR email = ?",
+            [username, email]
         );
 
         if (existing.length > 0) {
-            return res.render("register", { error: "Username already exists." });
+            // Check for taken username
+            const usernameTaken = existing.some(row => row.username === username);
+            if (usernameTaken) {
+                return res.render("register", { title: "Register", error: "Username already exists." });
+            }
+            return res.render("register", { title: "Register", error: "An account with that email already exists." });
+            
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
@@ -134,14 +151,14 @@ app.post("/register", requireGuest, async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.render("register", { error: "Something went wrong." });
+        res.render("register", { title: "Register", error: "Something went wrong." });
     }
 });
 
 // Login page
 app.get("/login", requireGuest, (req, res) => {
     res.render("login", { 
-        title: "Register",
+        title: "Login",
         error: null 
     });
 });
@@ -157,14 +174,14 @@ app.post("/login", requireGuest, async (req, res) => {
         );
 
         if (rows.length === 0) {
-            return res.render("login", { error: "Invalid credentials." });
+            return res.render("login", { title: "Login", error: "Invalid credentials." });
         }
 
         const user = rows[0];
         const match = await bcrypt.compare(password, user.password_hash);
 
         if (!match) {
-            return res.render("login", { error: "Invalid credentials." });
+            return res.render("login", { title: "Login", error: "Invalid credentials." });
         }
 
         req.session.user = {
@@ -178,7 +195,7 @@ app.post("/login", requireGuest, async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.render("login", { error: "Something went wrong." });
+        res.render("login", { title: "Login", error: "Something went wrong." });
     }
 });
 
