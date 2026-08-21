@@ -131,9 +131,8 @@ function filterBundles(bundles, slot, itemType) {
 /**
  * Resolve a single slot (prefix or suffix) to a bundle.
  *
- * 'Forced' slots resolve directly off
- * the select value: "none" -> null, "random" -> a random bundle from the
- * pool, otherwise the specific bundle containing that row id.
+ * 'Forced' slots resolve directly off the select value,
+ * 'none' = null, 'random' = a random bundle from the pool.
  *
  * 'Unforced' slots get an independent 50/50 roll
  * for whether the slot is populated at all.
@@ -222,6 +221,19 @@ function resolveAffixes(affixes, itemType, slotConfig = {}) {
 // -- name builder --
 
 /**
+ * Normalize the name of items that use a
+ * reversed "Category, Modifier" format
+ *
+ * @param {string} name
+ * @returns {string}
+ */
+function normalizeBaseName(name) {
+  const match = name.match(/^(.+),\s*(.+)$/);
+  if (!match) return name;
+  return `${match[2]} ${match[1]}`;
+}
+
+/**
  * Build the display name for the generated item.
  *
  * @param {string} baseName
@@ -230,13 +242,13 @@ function resolveAffixes(affixes, itemType, slotConfig = {}) {
  * @returns {string}
  */
 function buildItemName(baseName, prefix, suffix) {
-  let name = baseName;
+  let name = normalizeBaseName(baseName);
   //add prefix, base becomes lower case
-  if (prefix) name = `${prefix.display_name} ${name.toLowerCase()}`;
+  if (prefix) name = `${prefix.display_name} ${name}`;
   //add on 'of' the suffix
   if (suffix) name = `${name} of ${suffix.display_name}`;
   //fully assembled name
-  return name;
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
 
 // -- effect processor --
@@ -341,7 +353,7 @@ function applyAffixes(baseItem, prefix, suffix, itemType) {
     ...statDescriptions, // Built from 'stat' effect_category
     ...utilities, // Built from 'utility' effect_category
     // Remove duplicate descriptions from 'damage' effect_category rows
-    ...dedupeDescriptions( //b Bilt from 'damage' effect_category
+    ...dedupeDescriptions( // Bilt from 'damage' effect_category
       effectRows.filter((r) => r.effect_category === "damage" && r.description)
     ),
   ];
