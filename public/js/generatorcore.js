@@ -129,43 +129,27 @@ function filterBundles(bundles, slot, itemType) {
 // -- affix resolution --
 
 /**
- * Resolve which prefix bundle and suffix bundle to apply.
+ * Resolve a single slot (prefix or suffix) to a bundle.
  *
- * Returns bundles which are arrays of rows, not individual rows.
- * Either value may be null if no affix is assigned to that slot.
+ * 'Forced' slots resolve directly off
+ * the select value: "none" -> null, "random" -> a random bundle from the
+ * pool, otherwise the specific bundle containing that row id.
  *
- * @param {Array<Object>} affixes      Raw DB rows
- * @param {"weapon"|"armor"} itemType
- * @param {"random"|"prefix"|"suffix"|"both"|"custom"} affixMode
- * @param {{ prefixId?: string|number, suffixId?: string|number }} [customOptions]
- * @returns {{ prefix: AffixBundle|null, suffix: AffixBundle|null }}
+ * 'Unforced' slots get an independent 50/50 roll
+ * for whether the slot is populated at all.
+ *
+ * @param {boolean} forced
+ * @param {string|number|undefined} value   Only used when forced
+ * @param {Array<AffixBundle>} pool
+ * @returns {AffixBundle|null}
  */
-function resolveAffixes(affixes, itemType, affixMode, customOptions = {}) {
-  const bundles       = buildAffixBundles(affixes); // All db rows as affix bundles (all rows for 'Burning' are grouped)
-  const prefixBundles = filterBundles(bundles, "prefix", itemType); // All prefix bundles
-  const suffixBundles = filterBundles(bundles, "suffix", itemType); // All suffix bundles
-
-  // Custom: caller specifies each slot
-  if (affixMode === "custom") {
-    // Get the ids for the selected options
-    const { prefixId, suffixId } = customOptions;
-    return {
-      // Get specific affix by id, if id is none return null, if id is random select randomly from pool
-      prefix: resolveCustomBundle(prefixId, prefixBundles),
-      suffix: resolveCustomBundle(suffixId, suffixBundles),
-    };
+function resolveSlot(forced, value, pool) {
+  if (forced) {
+    return resolveCustomBundle(value, pool);
   }
 
-  // Random: 1/3 prefix only, 1/3 suffix only, 1/3 both
-  const roll = Math.ceil(Math.random() * 3);
-  const wantPrefix = roll === 1 || roll === 3;
-  const wantSuffix = roll === 2 || roll === 3;
-
-  return {
-    // Return random from prefix pools
-    prefix: wantPrefix ? (pickRandom(prefixBundles) ?? null) : null,
-    suffix: wantSuffix ? (pickRandom(suffixBundles) ?? null) : null,
-  };
+  // Unforced: independent 50/50 chance to appear at all
+  return Math.random() < 0.5 ? (pickRandom(pool) ?? null) : null;
 }
 
 /**
@@ -185,6 +169,54 @@ function resolveCustomBundle(id, pool) {
 
   // Find and return the bundle whose row list contains this id
   return pool.find((b) => b.rows.some((r) => String(r.id) === String(id))) ?? null;
+}
+
+/**
+ * Resolve which prefix bundle and suffix bundle to apply.
+ *
+ * Two cases:
+ *  - Neither slot forced uses 1/3 roll for either 1/3 prefix only,
+ *    1/3 suffix only, 1/3 both. A fully random item always
+ *    has at least one affix, never neither.
+ *  - One slot is forced alongside a forced which always resolves
+ *    with whatever is selected while the other slot gets
+ *    its own independent 50/50 roll for whether it appears at all.
+ *
+* @param {Array<Object>} affixes      Raw DB rows
+ * @param {"weapon"|"armor"} itemType
+ * @param {Object} slotConfig
+ * @param {boolean} slotConfig.prefixForced
+ * @param {string|number} [slotConfig.prefixValue]   "random" | "none" | row id
+ * @param {boolean} slotConfig.suffixForced
+ * @param {string|number} [slotConfig.suffixValue]   "random" | "none" | row id
+ * @returns {{ prefix: AffixBundle|null, suffix: AffixBundle|null }}
+ */
+function resolveAffixes(affixes, itemType, slotConfig = {}) {
+  const bundles       = buildAffixBundles(affixes); // All db rows as affix bundles (all rows for 'Burning' are grouped)
+  const prefixBundles = filterBundles(bundles, "prefix", itemType); // All prefix bundles
+  const suffixBundles = filterBundles(bundles, "suffix", itemType); // All suffix bundles
+
+  const { prefixForced, prefixValue, suffixForced, suffixValue } = slotConfig;
+
+  // Fully random: neither slot forced - tied roll guarantees at least one affix
+  if (!prefixForced && !suffixForced) {
+    const roll = Math.ceil(Math.random() * 3); // 1: prefix only, 2: suffix only, 3: both
+    const wantPrefix = roll === 1 || roll === 3;
+    const wantSuffix = roll === 2 || roll === 3;
+
+    return {
+      prefix: wantPrefix ? (pickRandom(prefixBundles) ?? null) : null,
+      suffix: wantSuffix ? (pickRandom(suffixBundles) ?? null) : null,
+    };
+  }
+
+  // At least one slot forced - resolveSlot resolves each slot on its own
+  // terms: a forced slot off its select value, an unforced slot via its
+  // own independent 50/50 roll
+  return {
+    prefix: resolveSlot(prefixForced, prefixValue, prefixBundles),
+    suffix: resolveSlot(suffixForced, suffixValue, suffixBundles),
+  };
 }
 
 // -- name builder --
@@ -383,18 +415,18 @@ function buildStatDescription(target, totalValue, effectRows) {
  * @param {Object}   params.baseItem
  * @param {string}   params.itemType      'weapon' | 'armor'
  * @param {Array}    params.affixes       Raw DB rows
- * @param {string}   params.affixMode     'random'|'custom'
- * @param {string}   [params.prefixId]    Custom mode: a row id, 'random', or 'none'
- * @param {string}   [params.suffixId]    Custom mode: a row id, 'random', or 'none'
+ * @param {boolean}  params.prefixForced    True if the Prefix Custom checkbox was checked
+ * @param {string|number} [params.prefixValue]  Select value when prefixForced: 'random' | 'none' | row id
+ * @param {boolean}  params.suffixForced    True if the Suffix Custom checkbox was checked
+ * @param {string|number} [params.suffixValue]  Select value when suffixForced: 'random' | 'none' | row id
  * @returns {Object}
  */
-function generateMagicItem({ baseItem, itemType, affixes, affixMode, prefixId, suffixId }) {
+function generateMagicItem({ baseItem, itemType, affixes, prefixForced, prefixValue, suffixForced, suffixValue }) {
   // Decide on which prefix and/or affix to use
   const { prefix, suffix } = resolveAffixes(
     affixes, // DB rows
     itemType, // Limit by weapon/armor
-    affixMode, // Random or custom
-    { prefixId, suffixId } // Specified row, random, or none
+    { prefixForced, prefixValue, suffixForced, suffixValue }
   );
 
   // Return object containing compiled results
@@ -409,6 +441,8 @@ if (typeof module !== "undefined" && module.exports) {
     buildAffixBundles,
     filterBundles,
     resolveAffixes,
+    resolveSlot,
+    resolveCustomBundle,
     applyAffixes,
     buildItemName,
     advanceDie,
@@ -423,6 +457,8 @@ if (typeof module !== "undefined" && module.exports) {
     buildAffixBundles,
     filterBundles,
     resolveAffixes,
+    resolveSlot,
+    resolveCustomBundle,
     applyAffixes,
     buildItemName,
     advanceDie,
