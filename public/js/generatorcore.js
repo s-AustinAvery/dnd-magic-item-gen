@@ -243,11 +243,11 @@ function normalizeBaseName(name) {
  */
 function buildItemName(baseName, prefix, suffix) {
   let name = normalizeBaseName(baseName);
-  //add prefix, base becomes lower case
+  //add prefix
   if (prefix) name = `${prefix.display_name} ${name}`;
   //add on 'of' the suffix
   if (suffix) name = `${name} of ${suffix.display_name}`;
-  //fully assembled name
+  //fully assembled name, first letter uppercase rest forced lower
   return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
 
