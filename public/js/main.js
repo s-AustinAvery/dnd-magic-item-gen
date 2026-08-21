@@ -31,6 +31,13 @@ document.addEventListener("DOMContentLoaded", () => {
         return arr[Math.floor(Math.random() * arr.length)];
     }
 
+    // Weapon, armor, or null
+    function getCheckedType() {
+        if (weaponType.checked) return "weapon";
+        if (armorType.checked)  return "armor";
+        return null;
+    }
+
     // -- Data fetching --
 
     async function fetchItemList(type) {
@@ -68,7 +75,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // -- Populate dropdowns --
 
     async function populateItemDropdown(type) {
-        // Skip populating if the item type is already loaded
+        // When no type selected only 'Random' shows
+        if (!type) {
+            itemSelect.innerHTML = `<option value="random">Random</option>`;
+            lastLoadedType = null;
+            return;
+        }
+
+        // Skip populating if the item type is already loaded 
         if (lastLoadedType === type) return;
 
         itemSelect.innerHTML = "";
@@ -201,38 +215,36 @@ document.addEventListener("DOMContentLoaded", () => {
     // -- UI state management --
 
     function updateUI() {
-        const type = itemTypeSelect.value;
-        const mode = affixModeSelect.value;
+        const type = getCheckedType();
 
-        // Item dropdown visibility
-        if (type === "random") {
-            hide(itemSelectGroup);
-            lastLoadedType = null;
-        } else {
-            show(itemSelectGroup);
-            populateItemDropdown(type);
-        }
+        // Use 'Random' if neither is checked
+        populateItemDropdown(type);
 
-        // Prefix/suffix dropdowns
-        if (mode === "custom") {
-            show(prefixGroup);
-            show(suffixGroup);
-            // Filter affixes to the selected item type
-            const affixFilterType = type === "random" ? "weapon" : type;
-            populateAffixDropdowns(affixFilterType);
-        } else {
-            hide(prefixGroup);
-            hide(suffixGroup);
-        }
+        // Default to weapon pool if no item type is selected
+        // Maybe I fix this later to show all and then if a weapon affix is selected
+        // armor affixes are removed from the other drop down options and vice versa
+        populateAffixDropdowns(type || "weapon");
+
+        // Prefix/suffix dropdown
+        if (prefixCustom.checked) show(prefixSelect); else hide(prefixSelect);
+        if (suffixCustom.checked) show(suffixSelect); else hide(suffixSelect);
     }
 
-    // Refresh affix dropdowns when item type changes while in custom mode
-    itemTypeSelect.addEventListener("change", () => {
+    // Weapon/Armor are mutually exclusive
+    weaponType.addEventListener("change", () => {
+        if (weaponType.checked) armorType.checked = false;
         lastLoadedType = null;
         updateUI();
     });
 
-    affixModeSelect.addEventListener("change", updateUI);
+    armorType.addEventListener("change", () => {
+        if (armorType.checked) weaponType.checked = false;
+        lastLoadedType = null;
+        updateUI();
+    });
+
+    prefixCustom.addEventListener("change", updateUI);
+    suffixCustom.addEventListener("change", updateUI);
 
     // -- Form submission --
 
@@ -247,16 +259,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const affixes = await fetchAffixes();
 
             // Resolve item type
-            let resolvedType = itemTypeSelect.value;
-            if (resolvedType === "random") {
-                resolvedType = Math.random() < 0.5 ? "weapon" : "armor";
-            }
+            const checkedType = getCheckedType();
+            const resolvedType = checkedType || (Math.random() < 0.5 ? "weapon" : "armor");
 
             // Resolve which base item to use
-            let selectedIndex = itemSelect.value;
+            let selectedIndex = (checkedType && itemSelect.value !== "random")
+                ? itemSelect.value
+                : null;
 
-            // If item type was random or item select is random, pick one
-            if (itemTypeSelect.value === "random" || selectedIndex === "random") {
+            if (!selectedIndex) {
                 const list = await fetchItemList(resolvedType);
                 selectedIndex = pickRandom(list).index;
             }
@@ -264,21 +275,16 @@ document.addEventListener("DOMContentLoaded", () => {
             // Fetch full item data
             const baseItem = await fetchItemDetail(selectedIndex);
 
-            // Resolve affix mode
-            const affixMode = affixModeSelect.value; // "random" or "custom"
-
-            // Only pass prefixId/suffixId in custom mode
-            const customOptions = affixMode === "custom"
-                ? { prefixId: prefixSelect.value, suffixId: suffixSelect.value }
-                : {};
-
-            // Generate the item
+            // Each slot is independently forced or unforced
+            // Unforced will let the engine roll its own 50/50 for whether it appears
             const generatedItem = MagicItemEngine.generateMagicItem({
                 baseItem,
                 itemType: resolvedType,
                 affixes,
-                affixMode,
-                ...customOptions
+                prefixForced: prefixCustom.checked,
+                prefixValue:  prefixSelect.value,
+                suffixForced: suffixCustom.checked,
+                suffixValue:  suffixSelect.value,
             });
 
             // Reset save button for the new item

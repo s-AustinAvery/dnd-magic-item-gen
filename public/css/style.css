@@ -143,6 +143,76 @@ input:focus {
 }
  
 /* =========================
+   Generator Layout
+========================= */
+.generator-top-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+    padding: 0;
+    width: auto;
+}
+
+.checkbox-label-right {
+    justify-content: flex-end;
+    text-align: right;
+}
+
+.item-type-group {
+    text-align: center;
+}
+
+.item-type-label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.item-type-checkboxes {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.generator-fields-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.field-slot {
+    display: flex;
+    justify-content: center;
+}
+
+.field-slot select {
+    width: 100%;
+    max-width: 180px;
+}
+
+.generate-btn-wrap {
+    display: flex;
+    justify-content: center;
+}
+
+/* =========================
    Buttons
 ========================= */
 button,
