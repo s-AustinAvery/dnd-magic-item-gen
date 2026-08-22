@@ -1,20 +1,34 @@
 document.addEventListener("DOMContentLoaded", () => {
 
     // -- Element references --
-    const itemTypeSelect    = document.getElementById("itemType");
-    const itemSelectGroup   = document.getElementById("itemSelectGroup");
+    const weaponType        = document.getElementById("weaponType");
+    const armorType         = document.getElementById("armorType");
     const itemSelect        = document.getElementById("itemSelect");
 
-    const affixModeSelect   = document.getElementById("affixMode");
-    const prefixGroup       = document.getElementById("prefixGroup");
-    const suffixGroup       = document.getElementById("suffixGroup");
+    const prefixCustom       = document.getElementById("prefixCustom");
+    const suffixCustom       = document.getElementById("suffixCustom");
     const prefixSelect      = document.getElementById("prefixSelect");
     const suffixSelect      = document.getElementById("suffixSelect");
 
     const form              = document.getElementById("generator-form");
     const resultCard        = document.getElementById("resultCard");
     const itemNameEl        = document.getElementById("itemName");
+    const rarityLabelEl       = document.getElementById("rarityLabel");
     const itemPropertiesEl  = document.getElementById("itemProperties");
+
+    // Rarity is currently set by number of affixes but this may
+    // change in the future. 'Epic' is not reachable yet but
+    // exists for when I may later add a 3-4 affix option
+    const RARITY_TIERS = [
+        { max: 0, className: "rarity-common",   label: "Common" },
+        { max: 1, className: "rarity-uncommon", label: "Uncommon" },
+        { max: 2, className: "rarity-rare",     label: "Rare" },
+        { max: 4, className: "rarity-epic",     label: "Epic" },
+    ];
+
+    function getRarity(affixCount) {
+        return RARITY_TIERS.find(tier => affixCount <= tier.max) ?? RARITY_TIERS[RARITY_TIERS.length - 1];
+    }
 
     // -- State --
     // Cache fetched lists so each UI update doesnt require another request
@@ -158,8 +172,16 @@ document.addEventListener("DOMContentLoaded", () => {
     // -- Render result --
 
     function renderResult(item) {
+        // Rarity based on number of affixes
+        const affixCount = [item.prefix, item.suffix].filter(Boolean).length;
+        const rarity = getRarity(affixCount);
+
         // Item name
         itemNameEl.textContent = item.name;
+        itemNameEl.className = `item-name ${rarity.className}`;
+
+        rarityLabelEl.textContent = rarity.label;
+        rarityLabelEl.className = `rarity-label ${rarity.className}`;
 
         // Clear previous properties
         itemPropertiesEl.innerHTML = "";
@@ -209,7 +231,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         show(resultCard);
+        triggerRevealAnimation();
         resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function triggerRevealAnimation() {
+        resultCard.classList.remove("reveal-active");
+        void resultCard.offsetWidth;
+        resultCard.classList.add("reveal-active");
     }
 
     // -- UI state management --
