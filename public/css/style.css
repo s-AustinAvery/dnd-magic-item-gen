@@ -413,6 +413,70 @@ button:hover {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* Owner edit controls */
+.item-owner-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+
+.edit-actions,
+.view-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.clickable-card {
+    cursor: pointer;
+    transition: box-shadow 0.15s ease;
+}
+
+.clickable-card:hover {
+    box-shadow:
+        0 0 0 1px rgba(0,0,0,0.4),
+        0 0 24px -4px var(--accent-primary);
+}
+
+.item-name-input {
+    display: block;
+    width: 100%;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.4rem;
+}
+
+.item-description-view {
+    font-style: italic;
+    color: var(--text-secondary);
+    text-align: left;
+    max-width: 420px;
+    margin: 1rem auto;
+    line-height: 1.5;
+}
+
+.item-description-input {
+    display: block;
+    width: 100%;
+    max-width: 420px;
+    margin: 1rem auto;
+    min-height: 100px;
+    resize: vertical;
+    text-align: left;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.6rem;
+    font-family: var(--font-body);
+}
+
 .login-hint {
     color: var(--forge-parchment-dim);
     font-size: 0.9rem;

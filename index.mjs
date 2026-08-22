@@ -245,9 +245,11 @@ app.post("/api/items/save", requireLogin, async (req, res) => {
     }
 
     try {
+        const shareToken = crypto.randomBytes(6).toString("hex");
+
         await db.query(
-            "INSERT INTO user_items (user_id, item_name, item_data, saved_at) VALUES (?, ?, ?, NOW())",
-            [req.session.user.id, item.name, JSON.stringify(item)]
+            "INSERT INTO user_items (user_id, item_name, item_data, saved_at, share_token) VALUES (?, ?, ?, NOW(), ?)",
+            [req.session.user.id, item.name, JSON.stringify(item), shareToken]
         );
 
         res.json({ success: true });
@@ -292,7 +294,7 @@ app.post("/api/items/collection/:id/share", requireLogin, async (req, res) => {
 app.get("/item/:token", async (req, res) => {
     try {
         const [rows] = await db.query(
-            "SELECT item_name, item_data, saved_at FROM user_items WHERE share_token = ?",
+            "SELECT id, user_id, item_name, item_data, item_description, saved_at FROM user_items WHERE share_token = ?",
             [req.params.token]
         );
 
@@ -300,11 +302,18 @@ app.get("/item/:token", async (req, res) => {
             return res.status(404).render("404", { title: "Item Not Found", user: req.session.user || null });
         }
 
+        const row = rows[0];
+        const isOwner = Boolean(req.session.user && req.session.user.id === row.user_id);
+
         res.render("item", {
-            title: rows[0].item_name,
+            title: row.item_name,
             user: req.session.user || null,
-            item: rows[0].item_data,
-            saved_at: rows[0].saved_at
+            item: row.item_data,
+            saved_at: row.saved_at,
+            itemId: row.id,
+            isOwner,
+            description: row.item_description || "",
+            shareUrl: `${req.protocol}://${req.get("host")}/item/${req.params.token}`
         });
     } catch (err) {
         console.error("Item view failed:", err);
@@ -367,7 +376,7 @@ app.get("/api/affixes", async (req, res) => {
 app.get("/api/items/collection", requireLogin, async (req, res) => {
     try {
         const [rows] = await db.query(
-            "SELECT id, item_name, item_data, saved_at FROM user_items WHERE user_id = ? ORDER BY saved_at DESC",
+            "SELECT id, item_name, item_data, saved_at, share_token FROM user_items WHERE user_id = ? ORDER BY saved_at DESC",
             [req.session.user.id]
         );
 
@@ -375,6 +384,7 @@ app.get("/api/items/collection", requireLogin, async (req, res) => {
             id: row.id,
             item_name: row.item_name,
             saved_at: row.saved_at,
+            share_token: row.share_token,
             ...row.item_data
         }));
 
@@ -401,6 +411,51 @@ app.delete("/api/items/collection/:id", requireLogin, async (req, res) => {
     } catch (err) {
         console.error("Delete failed:", err);
         res.status(500).json({ error: "Failed to delete item." });
+    }
+});
+
+// Edit saved items name/description. owner only
+app.patch("/api/items/collection/:id", requireLogin, async (req, res) => {
+    const { name, description } = req.body;
+
+    const trimmedName = typeof name === "string" ? name.trim() : "";
+    const trimmedDescription = typeof description === "string" ? description.trim() : "";
+
+    if (!trimmedName) {
+        return res.status(400).json({ error: "Name cannot be empty." });
+    }
+
+    if (trimmedName.length > 150) {
+        return res.status(400).json({ error: "Name is too long." });
+    }
+
+    if (trimmedDescription.length > 1000) {
+        return res.status(400).json({ error: "Description is too long." });
+    }
+
+    try {
+        // Confirm owner and pull the current item_data so its embedded
+        const [rows] = await db.query(
+            "SELECT item_data FROM user_items WHERE id = ? AND user_id = ?",
+            [req.params.id, req.session.user.id]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Item not found." });
+        }
+
+        const itemData = rows[0].item_data;
+        itemData.name = trimmedName;
+
+        await db.query(
+            "UPDATE user_items SET item_name = ?, item_data = ?, item_description = ? WHERE id = ? AND user_id = ?",
+            [trimmedName, JSON.stringify(itemData), trimmedDescription, req.params.id, req.session.user.id]
+        );
+
+        res.json({ success: true, name: trimmedName, description: trimmedDescription });
+    } catch (err) {
+        console.error("Item edit failed:", err);
+        res.status(500).json({ error: "Failed to save changes." });
     }
 });
 

@@ -10,7 +10,22 @@
 <main class="main-content">
     <section class="card result-card">
 
-        <div class="item-name"><%= item.name %></div>
+        <% if (isOwner) { %>
+            <div class="item-owner-controls">
+                <div class="view-actions" id="viewActions">
+                    <button class="btn-secondary" id="editItemBtn">Edit</button>
+                    <button class="btn-secondary" id="shareItemBtn">Share</button>
+                    <button class="btn-danger" id="deleteItemBtn">Delete</button>
+                </div>
+                <div class="edit-actions hidden" id="editActions">
+                    <button class="btn-secondary" id="saveItemEditBtn">Save</button>
+                    <button class="btn-secondary" id="cancelItemEditBtn">Cancel</button>
+                </div>
+            </div>
+        <% } %>
+
+        <div class="item-name" id="itemNameDisplay"><%= item.name %></div>
+        <input type="text" class="item-name-input hidden" id="itemNameInput" value="<%= item.name %>" maxlength="150" />
 
         <ul class="item-properties">
 
@@ -41,9 +56,14 @@
 
         </ul>
 
+        <p class="item-description-view <%= description ? '' : 'hidden' %>" id="itemDescriptionView"><%= description %></p>
+        <textarea class="item-description-input hidden" id="itemDescriptionInput" maxlength="1000" placeholder="Add flavor text or a description..."><%= description %></textarea>
+
         <p class="saved-date">Saved <%= new Date(saved_at).toLocaleDateString() %></p>
 
-        <% if (user) { %>
+        <% if (isOwner) { %>
+            <p class="save-feedback hidden" id="editFeedback"></p>
+        <% } else if (user) { %>
             <button class="generate-btn" id="saveSharedItemBtn">Save to My Collection</button>
             <p class="save-feedback hidden" id="saveFeedback"></p>
         <% } else { %>
@@ -51,12 +71,40 @@
         <% } %>
 
     </section>
+
+    <% if (isOwner) { %>
+        <!-- Share modal -->
+        <div class="modal-overlay hidden" id="shareModal">
+            <div class="modal">
+                <h3>Share Item</h3>
+                <p>Anyone with this link can view this item:</p>
+                <div class="share-link-box">
+                    <input type="text" id="shareLinkInput" readonly value="<%= shareUrl %>" />
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-secondary" id="closeShareBtn">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete confirmation modal -->
+        <div class="modal-overlay hidden" id="deleteModal">
+            <div class="modal">
+                <p>Are you sure you want to delete <strong><%= item.name %></strong>?</p>
+                <div class="modal-actions">
+                    <button class="btn-danger" id="confirmDeleteBtn">Delete</button>
+                    <button class="btn-secondary" id="cancelDeleteBtn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    <% } %>
 </main>
 
 <%- include("partials/foot") %>
 <script>
     // Pass items data to JS
     const sharedItem = <%- JSON.stringify(item) %>;
+    const itemId = <%- JSON.stringify(itemId) %>;
 </script>
 <script src="/js/item.js"></script>
 <script src="/js/headnav.js"></script>
