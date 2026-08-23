@@ -181,7 +181,7 @@ function resolveCustomBundle(id, pool) {
  *    with whatever is selected while the other slot gets
  *    its own independent 50/50 roll for whether it appears at all.
  *
-* @param {Array<Object>} affixes      Raw DB rows
+ * @param {Array<Object>} affixes      Raw DB rows
  * @param {"weapon"|"armor"} itemType
  * @param {Object} slotConfig
  * @param {boolean} slotConfig.prefixForced
@@ -418,6 +418,27 @@ function buildStatDescription(target, totalValue, effectRows) {
   return template.replace(/\d+/, String(totalValue));
 }
 
+// -- rarity --
+
+// Affix count dictates rarity. currently only 
+// rarirties 1-2 are implmented
+const RARITY_TIERS = [
+  { max: 0, className: "rarity-common",   label: "Common" },
+  { max: 1, className: "rarity-uncommon", label: "Uncommon" },
+  { max: 2, className: "rarity-rare",     label: "Rare" },
+  { max: 4, className: "rarity-epic",     label: "Epic" },
+];
+
+/**
+ * Determine rarity from the items number of affixes
+ * @param {{ prefix?: AffixBundle|null, suffix?: AffixBundle|null }} item
+ * @returns {{ className: string, label: string }}
+ */
+function getRarity(item) {
+  const affixCount = [item?.prefix, item?.suffix].filter(Boolean).length;
+  return RARITY_TIERS.find(tier => affixCount <= tier.max) ?? RARITY_TIERS[RARITY_TIERS.length - 1];
+}
+
 // -- public api --
 
 /**
@@ -460,6 +481,8 @@ if (typeof module !== "undefined" && module.exports) {
     advanceDie,
     parseDamage,
     formatDie,
+    getRarity,
+    RARITY_TIERS,
     SINGLE_DIE_TRACK,
     MULTI_DIE_TRACK,
   };
@@ -476,6 +499,8 @@ if (typeof module !== "undefined" && module.exports) {
     advanceDie,
     parseDamage,
     formatDie,
+    getRarity,
+    RARITY_TIERS,
     SINGLE_DIE_TRACK,
     MULTI_DIE_TRACK,
   };
