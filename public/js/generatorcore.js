@@ -218,20 +218,11 @@ function resolveAffixes(affixes, itemType, slotConfig = {}) {
   };
 }
 
-// -- name builder --
+const ItemDisplay = (typeof module !== "undefined" && module.exports)
+  ? require("./itemdisplay.js")
+  : window.ItemDisplay;
 
-/**
- * Normalize the name of items that use a
- * reversed "Category, Modifier" format
- *
- * @param {string} name
- * @returns {string}
- */
-function normalizeBaseName(name) {
-  const match = name.match(/^(.+),\s*(.+)$/);
-  if (!match) return name;
-  return `${match[2]} ${match[1]}`;
-}
+// -- name builder --
 
 /**
  * Build the display name for the generated item.
@@ -242,7 +233,7 @@ function normalizeBaseName(name) {
  * @returns {string}
  */
 function buildItemName(baseName, prefix, suffix) {
-  let name = normalizeBaseName(baseName);
+  let name = ItemDisplay.normalizeBaseName(baseName);
   //add prefix
   if (prefix) name = `${prefix.display_name} ${name}`;
   //add on 'of' the suffix
@@ -302,8 +293,10 @@ function applyAffixes(baseItem, prefix, suffix, itemType) {
         break;
       }
       case "weapon_die": {
+        const dieValue = Number(row.effect_value) || 1;
         // Add up the die upgrade count
-        dieSteps += Number(row.effect_value) || 1;
+        dieSteps += dieValue;
+        statMap[row.effect_target] = (statMap[row.effect_target] || 0) + dieValue;
         break;
       }
       case "damage": {
@@ -408,7 +401,7 @@ function buildStatDescription(target, totalValue, effectRows) {
   // Search for the row that matches these conditions and store its description
   const template = effectRows.find(
     // Should be a 'stat' with a matching effect_target
-    (r) => r.effect_target === target && r.effect_category === "stat"
+    (r) => r.effect_target === target && (r.effect_category === "stat" || r.effect_category === "weapon_die")
   )?.description;
 
   // If a description wasnt found just return values back 'strength: 1'
@@ -416,27 +409,6 @@ function buildStatDescription(target, totalValue, effectRows) {
 
   // Return the description after replacing number(s) with the total value collected
   return template.replace(/\d+/, String(totalValue));
-}
-
-// -- rarity --
-
-// Affix count dictates rarity. currently only 
-// rarirties 1-2 are implmented
-const RARITY_TIERS = [
-  { max: 0, className: "rarity-common",   label: "Common" },
-  { max: 1, className: "rarity-uncommon", label: "Uncommon" },
-  { max: 2, className: "rarity-rare",     label: "Rare" },
-  { max: 4, className: "rarity-epic",     label: "Epic" },
-];
-
-/**
- * Determine rarity from the items number of affixes
- * @param {{ prefix?: AffixBundle|null, suffix?: AffixBundle|null }} item
- * @returns {{ className: string, label: string }}
- */
-function getRarity(item) {
-  const affixCount = [item?.prefix, item?.suffix].filter(Boolean).length;
-  return RARITY_TIERS.find(tier => affixCount <= tier.max) ?? RARITY_TIERS[RARITY_TIERS.length - 1];
 }
 
 // -- public api --
@@ -481,8 +453,6 @@ if (typeof module !== "undefined" && module.exports) {
     advanceDie,
     parseDamage,
     formatDie,
-    getRarity,
-    RARITY_TIERS,
     SINGLE_DIE_TRACK,
     MULTI_DIE_TRACK,
   };
@@ -499,8 +469,6 @@ if (typeof module !== "undefined" && module.exports) {
     advanceDie,
     parseDamage,
     formatDie,
-    getRarity,
-    RARITY_TIERS,
     SINGLE_DIE_TRACK,
     MULTI_DIE_TRACK,
   };
