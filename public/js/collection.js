@@ -10,17 +10,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         card.dataset.id = item.id;
 
         // Name
-        const rarity = MagicItemEngine.getRarity(item);
+        const rarity = ItemDisplay.getRarity(item);
 
         const name = document.createElement("div");
         name.className = `item-name ${rarity.className}`;
         name.textContent = item.name;
         card.appendChild(name);
-
-        const rarityLabel = document.createElement("p");
-        rarityLabel.className = `rarity-label ${rarity.className}`;
-        rarityLabel.textContent = rarity.label;
-        card.appendChild(rarityLabel);
 
         // Properties list
         const propList = document.createElement("ul");

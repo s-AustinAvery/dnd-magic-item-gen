@@ -159,13 +159,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderResult(item) {
         // Rarity based on number of affixes
-        const rarity = MagicItemEngine.getRarity(item);
+        const rarity = ItemDisplay.getRarity(item);
 
         // Item name
         itemNameEl.textContent = item.name;
         itemNameEl.className = `item-name ${rarity.className}`;
 
-        rarityLabelEl.textContent = rarity.label;
+        const baseTypeName = item.baseItem?.name ? ItemDisplay.normalizeBaseName(item.baseItem.name) : "";
+        rarityLabelEl.textContent = baseTypeName ? `${rarity.label} ${baseTypeName}` : rarity.label;
         rarityLabelEl.className = `rarity-label ${rarity.className}`;
 
         // Clear previous properties
