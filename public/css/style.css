@@ -420,6 +420,10 @@ button:hover {
     right: 1rem;
 }
 
+.item-owner-controls + .item-name {
+    margin-top: 2.75rem;
+}
+
 .edit-actions,
 .view-actions {
     display: flex;
@@ -444,6 +448,7 @@ button:hover {
     font-size: 1.3rem;
     font-weight: 700;
     text-align: center;
+    margin-top: 2.75rem;
     margin-bottom: 0.5rem;
     background-color: var(--input-bg);
     color: var(--text-primary);
@@ -756,6 +761,7 @@ button:hover {
     border-radius: 6px;
     min-width: 140px;
     z-index: 100;
+    overflow: hidden;
 }
 
 .dropdown-item {
@@ -769,6 +775,10 @@ button:hover {
     text-align: left;
     cursor: pointer;
     font-size: 0.95rem;
+}
+
+.user-nav .dropdown-item {
+    margin-left: 0;
 }
 
 .dropdown-item:hover {
