@@ -16,20 +16,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const rarityLabelEl       = document.getElementById("rarityLabel");
     const itemPropertiesEl  = document.getElementById("itemProperties");
 
-    // Rarity is currently set by number of affixes but this may
-    // change in the future. 'Epic' is not reachable yet but
-    // exists for when I may later add a 3-4 affix option
-    const RARITY_TIERS = [
-        { max: 0, className: "rarity-common",   label: "Common" },
-        { max: 1, className: "rarity-uncommon", label: "Uncommon" },
-        { max: 2, className: "rarity-rare",     label: "Rare" },
-        { max: 4, className: "rarity-epic",     label: "Epic" },
-    ];
-
-    function getRarity(affixCount) {
-        return RARITY_TIERS.find(tier => affixCount <= tier.max) ?? RARITY_TIERS[RARITY_TIERS.length - 1];
-    }
-
     // -- State --
     // Cache fetched lists so each UI update doesnt require another request
     let cachedWeapons   = null;
@@ -173,8 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderResult(item) {
         // Rarity based on number of affixes
-        const affixCount = [item.prefix, item.suffix].filter(Boolean).length;
-        const rarity = getRarity(affixCount);
+        const rarity = MagicItemEngine.getRarity(item);
 
         // Item name
         itemNameEl.textContent = item.name;

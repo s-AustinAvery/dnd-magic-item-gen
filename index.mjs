@@ -7,6 +7,7 @@ import crypto from "crypto";
 import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
+import MagicItemEngine from "./public/js/generatorcore.js";
 
 dotenv.config();
 
@@ -309,6 +310,7 @@ app.get("/item/:token", async (req, res) => {
             title: row.item_name,
             user: req.session.user || null,
             item: row.item_data,
+            rarity: MagicItemEngine.getRarity(row.item_data),
             saved_at: row.saved_at,
             itemId: row.id,
             isOwner,

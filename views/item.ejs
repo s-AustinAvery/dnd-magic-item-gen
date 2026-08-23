@@ -24,9 +24,11 @@
             </div>
         <% } %>
 
-        <div class="item-name" id="itemNameDisplay"><%= item.name %></div>
+        <div class="item-name <%= rarity.className %>" id="itemNameDisplay"><%= item.name %></div>
         <input type="text" class="item-name-input hidden" id="itemNameInput" value="<%= item.name %>" maxlength="150" />
 
+        <p class="rarity-label <%= rarity.className %>"><%= rarity.label %></p>
+        
         <ul class="item-properties">
 
             <% if (item.damageDisplay) { %>
