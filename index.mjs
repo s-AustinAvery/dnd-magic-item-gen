@@ -8,6 +8,7 @@ import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import ItemDisplay from "./public/js/itemdisplay.js";
+import MagicItemEngine from "./public/js/generatorcore.js";
 
 dotenv.config();
 
@@ -126,6 +127,9 @@ app.get("/register", requireGuest, (req, res) => {
 // Basic email format 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const PASSWORD_MIN_LENGTH = 12;
+const PASSWORD_MAX_LENGTH = 64;
+
 // Register post route
 app.post("/register", requireGuest, async (req, res) => {
     const { username, password, email } = req.body;
@@ -134,6 +138,13 @@ app.post("/register", requireGuest, async (req, res) => {
         return res.render("register", {
             title: "Register",
             error: "All fields are required." 
+        });
+    }
+
+    if (password.length <= PASSWORD_MIN_LENGTH || password.length >= PASSWORD_MAX_LENGTH) {
+        return res.render("register", {
+            title: "Register",
+            error: `Password must have ${PASSWORD_MIN_LENGTH} to ${PASSWORD_MAX_LENGTH} characters.`
         });
     }
 
@@ -247,28 +258,64 @@ app.get("/collection", requireLogin, (req, res) => {
     });
 });
 
-// Generate item
-app.post("/generate", async (req, res) => {
-  try {
-    const result = await generateItem(req.body);
+// Generate an item server side. 
+// The client only ever sends the users choices
+app.post("/api/generate", async (req, res) => {
+    const { itemType, itemIndex, prefixForced, prefixValue, suffixForced, suffixValue } = req.body;
 
-    res.render("index", {
-      user: req.session.user,
-      generatedItem: result
-    });
+    try {
+        // Resolve item type
+        const resolvedType = (itemType === "weapon" || itemType === "armor")
+            ? itemType
+            : (Math.random() < 0.5 ? "weapon" : "armor");
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Item generation failed");
-  }
+        // Resolve which specific base item to use
+        const listEndpoint = resolvedType === "weapon" ? "/equipment-categories/weapon" : "/equipment-categories/armor";
+        const listData = await fetchFromSRD(listEndpoint);
+        const baseList = listData.equipment.filter(item => item.url.includes("/equipment/"));
+
+        let selectedIndex = (itemIndex && itemIndex !== "random") ? itemIndex : null;
+        if (!selectedIndex) {
+            selectedIndex = baseList[Math.floor(Math.random() * baseList.length)]?.index;
+        }
+
+        // Confirm the requested index is actually valid for this item type
+        if (!baseList.some(item => item.index === selectedIndex)) {
+            return res.status(400).json({ error: "Invalid item selection." });
+        }
+
+        const baseItem = await fetchFromSRD(`/equipment/${selectedIndex}`);
+
+        // Affixes come from the DB
+        const [affixes] = await db.query("SELECT * FROM affixes");
+
+        const generatedItem = MagicItemEngine.generateMagicItem({
+            baseItem,
+            itemType: resolvedType,
+            affixes,
+            prefixForced: Boolean(prefixForced),
+            prefixValue,
+            suffixForced: Boolean(suffixForced),
+            suffixValue,
+        });
+
+        // Remember what was generated so /api/items/save can trust
+        // it later without needing to revalidat what the client sends
+        req.session.lastGeneratedItem = generatedItem;
+
+        res.json(generatedItem);
+    } catch (err) {
+        console.error("Generation failed:", err);
+        res.status(500).json({ error: "Failed to generate item." });
+    }
 });
 
 // Save item to collection
 app.post("/api/items/save", requireLogin, async (req, res) => {
-    const { item } = req.body;
+    const item = req.session.lastGeneratedItem; //use the stored generated item
 
     if (!item || !item.name) {
-        return res.status(400).json({ error: "Invalid item data." });
+        return res.status(400).json({ error: "No item to save." });
     }
 
     try {
@@ -282,6 +329,33 @@ app.post("/api/items/save", requireLogin, async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         console.error("Save item failed:", err);
+        res.status(500).json({ error: "Failed to save item." });
+    }
+});
+
+// Save a copy of a publicly shared item to your own collection.
+app.post("/api/items/collection/copy/:token", requireLogin, async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            "SELECT item_name, item_data, item_description FROM user_items WHERE share_token = ?",
+            [req.params.token]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "Item not found." });
+        }
+
+        const source = rows[0];
+        const shareToken = crypto.randomBytes(6).toString("hex");
+
+        await db.query(
+            "INSERT INTO user_items (user_id, item_name, item_data, item_description, saved_at, share_token) VALUES (?, ?, ?, ?, NOW(), ?)",
+            [req.session.user.id, source.item_name, JSON.stringify(source.item_data), source.item_description, shareToken]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Copy item failed:", err);
         res.status(500).json({ error: "Failed to save item." });
     }
 });
