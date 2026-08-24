@@ -14,10 +14,36 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Set to have req.protocol report https rather than http
+app.set("trust proxy", 1);
+
 // D&D API base
 const DND_API_BASE = "https://www.dnd5eapi.co/api/2014";
 
-// Needed because __dirname doesn't exist in ES modules
+// in memory cache for SRD API responses so as to reduce the
+// number of calls to the api. Calls once per render startup. 
+const srdCache = new Map();
+
+async function fetchFromSRD(endpoint) {
+    if (srdCache.has(endpoint)) {
+        return srdCache.get(endpoint);
+    }
+
+    const response = await fetch(`${DND_API_BASE}${endpoint}`);
+
+    if (!response.ok) {
+        // Dont cache a failed request
+        const err = new Error(`SRD API request failed: ${endpoint} (${response.status})`);
+        err.status = response.status;
+        throw err;
+    }
+
+    const data = await response.json();
+    srdCache.set(endpoint, data);
+    return data;
+}
+
+// __dirname doesnt exist in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -327,8 +353,7 @@ app.get("/item/:token", async (req, res) => {
 // Get weapons
 app.get("/api/items/weapons", async (req, res) => {
     try {
-        const response = await fetch(`${DND_API_BASE}/equipment-categories/weapon`);
-        const data = await response.json();
+        const data = await fetchFromSRD("/equipment-categories/weapon");
         const baseOnly = data.equipment.filter(item => item.url.includes("/equipment/"));
         res.json(baseOnly);
     } catch (err) {
@@ -340,8 +365,7 @@ app.get("/api/items/weapons", async (req, res) => {
 // Get armor
 app.get("/api/items/armor", async (req, res) => {
     try {
-        const response = await fetch(`${DND_API_BASE}/equipment-categories/armor`);
-        const data = await response.json();
+        const data = await fetchFromSRD("/equipment-categories/armor");
         const baseOnly = data.equipment.filter(item => item.url.includes("/equipment/"));
         res.json(baseOnly);
     } catch (err) {
@@ -353,13 +377,12 @@ app.get("/api/items/armor", async (req, res) => {
 // Get item data
 app.get("/api/items/detail/:index", async (req, res) => {
     try {
-        const response = await fetch(`${DND_API_BASE}/equipment/${req.params.index}`);
-        if (!response.ok) {
-            return res.status(404).json({ error: "Item not found" });
-        }
-        const data = await response.json();
+        const data = await fetchFromSRD(`/equipment/${req.params.index}`);
         res.json(data);
     } catch (err) {
+        if (err.status === 404) {
+            return res.status(404).json({ error: "Item not found" });
+        }
         console.error("Item detail fetch failed:", err);
         res.status(500).json({ error: "Failed to fetch item detail" });
     }
