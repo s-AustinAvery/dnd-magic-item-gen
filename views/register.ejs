@@ -31,12 +31,13 @@
         <div class="form-group">
           <label for="email">Email</label>
           <input id="email" name="email" type="email" placeholder="Enter your email" required />
-          <small class="field-hint">Demo project; real email not required.</small>
+          <small class="field-hint">Demo project; real email not required</small>
         </div>
 
         <div class="form-group">
           <label for="password">Password</label>
-          <input id="password" type="password" name="password" placeholder="Create a password" required />
+          <input id="password" type="password" name="password" placeholder="Create a password" minlength="12" maxlength="64" required />
+          <small class="field-hint">12-64 characters</small>
         </div>
 
         <button type="submit" class="auth-btn">Create Account</button>

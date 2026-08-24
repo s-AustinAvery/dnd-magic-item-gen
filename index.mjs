@@ -127,6 +127,9 @@ app.get("/register", requireGuest, (req, res) => {
 // Basic email format 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const PASSWORD_MIN_LENGTH = 12;
+const PASSWORD_MAX_LENGTH = 64;
+
 // Register post route
 app.post("/register", requireGuest, async (req, res) => {
     const { username, password, email } = req.body;
@@ -135,6 +138,13 @@ app.post("/register", requireGuest, async (req, res) => {
         return res.render("register", {
             title: "Register",
             error: "All fields are required." 
+        });
+    }
+
+    if (password.length <= PASSWORD_MIN_LENGTH || password.length >= PASSWORD_MAX_LENGTH) {
+        return res.render("register", {
+            title: "Register",
+            error: `Password must have ${PASSWORD_MIN_LENGTH} to ${PASSWORD_MAX_LENGTH} characters.`
         });
     }
 
