@@ -9,10 +9,9 @@ document.addEventListener("DOMContentLoaded", () => {
             saveBtn.textContent = "Saving...";
 
             try {
-                const response = await fetch("/api/items/save", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ item: sharedItem })
+                const token = window.location.pathname.split("/").pop();
+                const response = await fetch(`/api/items/collection/copy/${token}`, {
+                    method: "POST"
                 });
 
                 const data = await response.json();
@@ -131,9 +130,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // -- Share modal --
+
     const shareBtn        = document.getElementById("shareItemBtn");
     const shareModal      = document.getElementById("shareModal");
-    const shareLinkInput  = document.getElementById("shareLinkInput");
     const closeShareBtn   = document.getElementById("closeShareBtn");
 
     if (shareBtn) {

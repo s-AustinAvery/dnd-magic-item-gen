@@ -27,10 +27,6 @@ document.addEventListener("DOMContentLoaded", () => {
     function show(el) { el.classList.remove("hidden"); }
     function hide(el) { el.classList.add("hidden"); }
 
-    function pickRandom(arr) {
-        return arr[Math.floor(Math.random() * arr.length)];
-    }
-
     // Weapon, armor, or null
     function getCheckedType() {
         if (weaponType.checked) return "weapon";
@@ -64,12 +60,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!response.ok) throw new Error("Failed to fetch affixes");
         cachedAffixes = await response.json();
         return cachedAffixes;
-    }
-
-    async function fetchItemDetail(index) {
-        const response = await fetch(`/api/items/detail/${index}`);
-        if (!response.ok) throw new Error(`Failed to fetch item detail: ${index}`);
-        return await response.json();
     }
 
     // -- Populate dropdowns --
@@ -271,36 +261,27 @@ document.addEventListener("DOMContentLoaded", () => {
         submitBtn.textContent = "Generating...";
 
         try {
-            const affixes = await fetchAffixes();
+            const checkedType = getCheckedType(); // Armor/Weapon/Null
 
-            // Resolve item type
-            const checkedType = getCheckedType();
-            const resolvedType = checkedType || (Math.random() < 0.5 ? "weapon" : "armor");
-
-            // Resolve which base item to use
-            let selectedIndex = (checkedType && itemSelect.value !== "random")
-                ? itemSelect.value
-                : null;
-
-            if (!selectedIndex) {
-                const list = await fetchItemList(resolvedType);
-                selectedIndex = pickRandom(list).index;
-            }
-
-            // Fetch full item data
-            const baseItem = await fetchItemDetail(selectedIndex);
-
-            // Each slot is independently forced or unforced
-            // Unforced will let the engine roll its own 50/50 for whether it appears
-            const generatedItem = MagicItemEngine.generateMagicItem({
-                baseItem,
-                itemType: resolvedType,
-                affixes,
-                prefixForced: prefixCustom.checked,
-                prefixValue:  prefixSelect.value,
-                suffixForced: suffixCustom.checked,
-                suffixValue:  suffixSelect.value,
+            const response = await fetch("/api/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    itemType: checkedType,
+                    itemIndex: checkedType ? itemSelect.value : null,
+                    prefixForced: prefixCustom.checked,
+                    prefixValue:  prefixSelect.value,
+                    suffixForced: suffixCustom.checked,
+                    suffixValue:  suffixSelect.value,
+                })
             });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || "Generation failed");
+            }
+            
+            const generatedItem = await response.json();
 
             // Reset save button for the new item
             if (saveBtn) {
@@ -334,9 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             try {
                 const response = await fetch("/api/items/save", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ item: lastGeneratedItem })
+                    method: "POST"
                 });
 
                 const data = await response.json();
