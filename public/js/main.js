@@ -20,8 +20,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Cache fetched lists so each UI update doesnt require another request
     let cachedWeapons   = null;
     let cachedArmor     = null;
-    let cachedAffixes   = null; // full affix list from DB
-    let lastLoadedType  = null; // type currently in the item dropdown
+    let cachedAffixOptions = {}; // Keyed by item type
+    let lastLoadedType  = null; // Type currently in the item dropdown
 
     // -- Utility --
     function show(el) { el.classList.remove("hidden"); }
@@ -53,13 +53,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return items;
     }
 
-    async function fetchAffixes() {
-        if (cachedAffixes) return cachedAffixes;
+    async function fetchAffixOptions(itemType) {
+        if (cachedAffixOptions[itemType]) return cachedAffixOptions[itemType];
 
-        const response = await fetch("/api/affixes");
+        const response = await fetch(`/api/affixes/options?type=${itemType}`);
         if (!response.ok) throw new Error("Failed to fetch affixes");
-        cachedAffixes = await response.json();
-        return cachedAffixes;
+
+        const data = await response.json();
+        cachedAffixOptions[itemType] = data;
+        return data;
     }
 
     // -- Populate dropdowns --
@@ -116,27 +118,20 @@ document.addEventListener("DOMContentLoaded", () => {
         suffixSelect.innerHTML = `<option value="random">Random</option><option value="none">None</option>`;
 
         try {
-            const affixes = await fetchAffixes();
+            // Server has already grouped/filtered these into { id, display_name }
+            const { prefixes, suffixes } = await fetchAffixOptions(itemType);
 
-            // Build bundles using the engine so the dropdown matches exactly what
-            // the engine will select. There will be one option per logical affix not per DB row
-            const bundles = MagicItemEngine.buildAffixBundles(affixes);
-            const prefixBundles = MagicItemEngine.filterBundles(bundles, "prefix", itemType);
-            const suffixBundles = MagicItemEngine.filterBundles(bundles, "suffix", itemType);
-
-            // Use the id of the bundles first row as the option value.
-            // resolveCustomBundle will find the bundle that contains that id.
-            prefixBundles.forEach(bundle => {
+            prefixes.forEach(({ id, display_name }) => {
                 const option = document.createElement("option");
-                option.value = bundle.rows[0].id;
-                option.textContent = bundle.display_name;
+                option.value = id;
+                option.textContent = display_name;
                 prefixSelect.appendChild(option);
             });
 
-            suffixBundles.forEach(bundle => {
+            suffixes.forEach(({ id, display_name }) => {
                 const option = document.createElement("option");
-                option.value = bundle.rows[0].id;
-                option.textContent = bundle.display_name;
+                option.value = id;
+                option.textContent = display_name;
                 suffixSelect.appendChild(option);
             });
 

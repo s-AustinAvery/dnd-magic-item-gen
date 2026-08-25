@@ -462,13 +462,23 @@ app.get("/api/items/detail/:index", async (req, res) => {
     }
 });
 
-app.get("/api/affixes", async (req, res) => {
+// Returns the display_name to populate the prefix/suffix dropdowns for a given item type
+app.get("/api/affixes/options", async (req, res) => {
+    const itemType = req.query.type === "armor" ? "armor" : "weapon";
+
     try {
-        const [rows] = await db.query("SELECT * FROM affixes");
-        res.json(rows);
+        const [affixes] = await db.query("SELECT * FROM affixes");
+        const bundles = MagicItemEngine.buildAffixBundles(affixes);
+
+        const toOption = (bundle) => ({ id: bundle.rows[0].id, display_name: bundle.display_name });
+
+        res.json({
+            prefixes: MagicItemEngine.filterBundles(bundles, "prefix", itemType).map(toOption),
+            suffixes: MagicItemEngine.filterBundles(bundles, "suffix", itemType).map(toOption),
+        });
     } catch (err) {
-        console.error("Affix fetch failed:", err);
-        res.status(500).json({ error: "Failed to fetch affixes" });
+        console.error("Affix options fetch failed:", err);
+        res.status(500).json({ error: "Failed to fetch affix options." });
     }
 });
 
