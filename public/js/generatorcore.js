@@ -218,9 +218,7 @@ function resolveAffixes(affixes, itemType, slotConfig = {}) {
   };
 }
 
-const ItemDisplay = (typeof module !== "undefined" && module.exports)
-  ? require("./itemdisplay.js")
-  : window.ItemDisplay;
+const ItemDisplay = require("./itemdisplay.js");
 
 // -- name builder --
 
@@ -440,36 +438,18 @@ function generateMagicItem({ baseItem, itemType, affixes, prefixForced, prefixVa
 
 // -- exports --
 
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = {
-    generateMagicItem,
-    buildAffixBundles,
-    filterBundles,
-    resolveAffixes,
-    resolveSlot,
-    resolveCustomBundle,
-    applyAffixes,
-    buildItemName,
-    advanceDie,
-    parseDamage,
-    formatDie,
-    SINGLE_DIE_TRACK,
-    MULTI_DIE_TRACK,
-  };
-} else {
-  window.MagicItemEngine = {
-    generateMagicItem,
-    buildAffixBundles,
-    filterBundles,
-    resolveAffixes,
-    resolveSlot,
-    resolveCustomBundle,
-    applyAffixes,
-    buildItemName,
-    advanceDie,
-    parseDamage,
-    formatDie,
-    SINGLE_DIE_TRACK,
-    MULTI_DIE_TRACK,
-  };
-}
+module.exports = {
+  generateMagicItem,
+  buildAffixBundles,
+  filterBundles,
+  resolveAffixes,
+  resolveSlot,
+  resolveCustomBundle,
+  applyAffixes,
+  buildItemName,
+  advanceDie,
+  parseDamage,
+  formatDie,
+  SINGLE_DIE_TRACK,
+  MULTI_DIE_TRACK,
+};
