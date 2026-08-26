@@ -1,6 +1,6 @@
 # D&D Magic Item Generator
 
-A full stack web app that generates randomized (or customized) magic weapons and armor for Dungeons & Dragons 5th Edition, with user accounts to save, edit, and share generated items.
+A full stack web app that generates randomized (or customized) magic weapons and armor for Dungeons & Dragons 5th Edition. User accounts support saving, editing, and sharing generated items.
 
 **[Live demo →](https://dnd-magic-item-generator.onrender.com)**
 **[Repository →](https://github.com/s-AustinAvery/dnd-magic-item-gen)**
@@ -11,18 +11,17 @@ A full stack web app that generates randomized (or customized) magic weapons and
 
 ## Overview
 
-Base weapon and armor data comes from the [D&D 5e SRD API](https://www.dnd5eapi.co/). 'Affixes' are custom designed and stored in a MySQL database, and can be combined onto a base item either at random or with user control over each slot. Generated items can be saved to a personal collection, given a custom name and flavor text, and shared with anyone via a unique link.
+Base weapon and armor data comes from the [D&D 5e SRD API](https://www.dnd5eapi.co/). 'Affixes' are stored in a MySQL database, and can be combined onto a base item either at random or with user control over each slot. Generated items can be saved to a personal collection, given a custom name and flavor text, and shared with anyone via a unique link.
 
 ## Features
 
-- **Server authoritative generation and saving** — the client only ever sends the user's selections to the server which then resolves the base item, pulls affixes from the database, and runs the actual generation logic itself. Nothing the browser computes is trusted for what gets saved, so there's no way to tamper with a save by editing client side state
-- **Minimal client-side data exposure** — the browser never sees an affix's mechanical details, only the `{ id, display_name }` pair needed to populate a dropdown. The full generation engine never loads in the browser due to being server only
-- **Weighted random generation** — fully random items are guaranteed at least one affix. Each affix slot can also be independently forced to a specific option, forced random, forced to none, or left to its own chance to appear
-- **Rarity system** — items are colored and labeled based on how many affixes they have
-- **User accounts** — registration and login with hashed passwords and session based authentication
-- **Personal item collection** — save generated items, edit their name and add custom flavor text, delete them, or share a public view only link
-- **Server-side caching** of SRD API responses, so repeated requests for the same weapon/armor data don't keep accessing the external API
-
+- **Server authoritative generation and saving** - The client only ever sends the user's selections to the server which then resolves the base item, pulls affixes from the database, and runs the actual generation logic itself. Nothing the browser computes is trusted for what gets saved, so there's no way to tamper with a save by editing client side state
+- **Minimal client side data exposure** - The browser never sees an affix's mechanical properties, only the `{ id, display_name }` pair needed to populate a dropdown. The full generation engine never loads in the browser due to being server only
+- **Weighted random generation** - Fully random items are guaranteed at least one affix. Each affix slot can also be independently forced to a specific option, forced random, forced to none, or left to its own chance to appear
+- **Rarity system** - Items are colored and labeled based on how many affixes they have
+- **User accounts** - Registration and login with hashed passwords and session based authentication
+- **Personal item collection** - Save generated items, edit their name and add custom flavor text, delete them, or share a public view only link
+- **Server side caching** - Repeated requests for the same weapon/armor data don't keep accessing the external API
 ## Tech Stack
 
 - **Backend:** Node.js, Express, MySQL (`mysql2`)
